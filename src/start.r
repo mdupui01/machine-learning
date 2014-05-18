@@ -35,3 +35,26 @@ us.states <- c('ak', 'al', 'ar', 'az', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi',
 ufo$USState <- us.states[match(ufo$USState, us.states)]
 ufo$USCity[is.na(ufo$USState)] <- NA
 
+# Creating a subset consisting only of ufo sightings from US states
+ufo.us <- subset(ufo, !is.na(USState))
+head(ufo.us)
+
+# Build a histogram to look at the time distribution of the data
+quick.hist <- ggplot(ufo.us, aes(x = DateOccurred)) + geom_histogram()
+quick.hist + scale_x_date(major = "50 years")
+print(quick.hist)
+ggsave(plot=quick.hist, filename= "/Users/marcdupuis/src/machine_learning/data/quick_hist.png", height = 6, width = 8)
+
+# Remove dates earlier than 1990
+ufo.us <- subset(ufo.us, DateOccurred >= as.Date("1990-01-01"))
+
+# Add a new column indicating only the month of the sighting
+ufo.us$YearMonth <- strftime(ufo.us$DateOccurred, format = "%Y-%m")
+
+# Aggregate the data by state and month/year and fill in the months with no sightings with zeros
+sightings.counts <- ddply(ufo.us, .(USState, YearMonth), nrow)
+date.range <- seq.Date(from = as.Date(min(ufo.us$DateOccurred)), to = as.Date(max(ufo.us$DateOccurred)), by="month")
+date.strings <- strftime(date.range, "%Y-%m")
+states.date <- lapply(us.states, function(s) cbind(s, date.strings))
+states.dates <- data.frame(do.call(rbind, states.date), stringsAsFactors = FALSE)
+all.sightings <- merge(states.dates, sightings.counts, by.x=c("s", "date.strings"), by.y=c("USState", "YearMonth"), all = TRUE)
