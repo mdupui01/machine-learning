@@ -1,4 +1,5 @@
 library(ggplot2)
+library(plyr)
 
 ufo <- read.delim("/Users/marcdupuis/src/machine_learning/data/ML_for_Hackers-master/01-Introduction/data/ufo/ufo_awesome.tsv", sep="\t", stringsAsFactors = FALSE, header = FALSE, na.strings = "")
 
@@ -58,3 +59,20 @@ date.strings <- strftime(date.range, "%Y-%m")
 states.date <- lapply(us.states, function(s) cbind(s, date.strings))
 states.dates <- data.frame(do.call(rbind, states.date), stringsAsFactors = FALSE)
 all.sightings <- merge(states.dates, sightings.counts, by.x=c("s", "date.strings"), by.y=c("USState", "YearMonth"), all = TRUE)
+
+# Change the column names of all.sightings
+
+names(all.sightings) <- c("State", "YearMonth", "Sightings")
+all.sightings$Sightings[is.na(all.sightings$Sightings)] <- 0
+all.sightings$YearMonth <- as.Date(rep(date.range, length(us.states)))
+all.sightings$State <- as.factor(toupper(all.sightings$State))
+
+# Visualization the data
+
+state.plot <- ggplot(all.sightings, aes(x=YearMonth, y=Sightings)) +
+  geom_line(aes(color="darkblue")) +
+  facet_wrap(~State, nrow=10, ncol=5) +
+  theme_bw() +
+  scale_color_manual(values=c("darkblue"="darkblue"), guide="none") +
+  xlab("Time") + ylab("Number of Sightings") +
+ggsave(plot=state.plot, filename="/Users/marcdupuis/src/machine_learning/data/ufo_sightings.pdf", width=14, height=8.5)
